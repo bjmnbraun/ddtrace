@@ -1,0 +1,9 @@
+This directory contains a tool, EventParser
+
+To use:
+
+1) make
+
+2) ./EventParser <path to .ddt files>
+
+To see the syntax of .ddt files, see the examples (they're produced by hello_world_consumer)

@@ -1,0 +1,35 @@
+#!/bin/bash
+
+set -e
+
+# Clear old DDTraceConfig
+rm -rf DDTraceConfig || true
+mkdir -p DDTraceConfig
+
+# You can just as easily use 
+#echo -n "#define PARAMETER VALUE" DDTraceConfig/PARAMETER.h
+# but I chose the cat script approach because it is in a more readable
+# key-value order
+
+cat << EOF > DDTraceConfig/RECORD_QUEUE_SIZE.h
+#define RECORD_QUEUE_SIZE 32
+EOF
+
+if [ -z "$(./VersionCheck.py)" ]; then
+cat << EOF > DDTraceConfig/atomic.h
+#include <cstdatomic>
+EOF
+else 
+cat << EOF > DDTraceConfig/atomic.h
+#include <atomic>
+EOF
+fi
+
+cat << EOF > DDTraceConfig/USE_PERF_EVENT_OPEN.h
+#define USE_PERF_EVENT_OPEN 0
+EOF
+
+# XXX Detect which /arch is the correct one?
+cat << EOF > DDTraceConfig/ARCH_HWPERFCOUNTERS.h
+#include "DDTrace/arch/ramcloud/arch/HWPerfCounters.h"
+EOF

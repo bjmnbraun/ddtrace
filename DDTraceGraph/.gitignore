@@ -1,0 +1,4 @@
+*.swp
+config.make
+bin/data/DDTraceGraph.pdf
+bin/DDTraceGraph

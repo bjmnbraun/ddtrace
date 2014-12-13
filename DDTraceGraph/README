@@ -1,0 +1,22 @@
+DDTraceGraph is a graphing tool used to make pretty figures of DDTrace analysis
+data.
+
+To use:
+
+1) Install openframeworks, see 
+  http://openframeworks.cc/
+
+2) Copy config.make.nonlocal to config.make 
+
+3) Open config.make and change OF_ROOT to point to the root of your
+openFrameworks installation
+    NOTE: Alternatively, if you set the environmental variable OF_ROOT to point
+    to the root of your OF installation, you don't need to modify config.make
+
+4) make
+
+5) cd bin
+
+6) ./DDtraceGraph <any number of .ddt files, such as those output from hello_world_consumer> 
+
+The output graph is in data/DDTraceGraph.pdf (within the bin directory)

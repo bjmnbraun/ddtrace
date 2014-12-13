@@ -1,0 +1,37 @@
+#!/bin/bash
+
+#This is a configuration file that should work for relatively new systems.
+# It uses the perf_event_open interface to rdpmc, not Module.
+
+set -e
+
+# Clear old DDTraceConfig
+rm -rf DDTraceConfig || true
+mkdir -p DDTraceConfig
+
+# You can just as easily use 
+#echo -n "#define PARAMETER VALUE" DDTraceConfig/PARAMETER.h
+# but I chose the cat script approach because it is in a more readable
+# key-value order
+
+cat << EOF > DDTraceConfig/RECORD_QUEUE_SIZE.h
+#define RECORD_QUEUE_SIZE 32
+EOF
+
+if [ -z "$(./VersionCheck.py)" ]; then
+cat << EOF > DDTraceConfig/atomic.h
+#include <cstdatomic>
+EOF
+else 
+cat << EOF > DDTraceConfig/atomic.h
+#include <atomic>
+EOF
+fi
+
+cat << EOF > DDTraceConfig/USE_PERF_EVENT_OPEN.h
+#define USE_PERF_EVENT_OPEN 1
+EOF
+
+cat << EOF > DDTraceConfig/ARCH_HWPERFCOUNTERS.h
+#include "DDTrace/arch/maverick/arch/HWPerfCounters.h"
+EOF

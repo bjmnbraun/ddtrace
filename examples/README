@@ -1,0 +1,18 @@
+To build the examples:
+
+First make ddtrace (see README in parent folder)
+
+Then,
+
+1) make
+
+2) ./bin/src/hello_world_consumer & 
+   # You may see some output here
+   CONSUMER_PID=$!
+
+3) ./bin/src/hello_world
+
+4) kill $CONSUMER_PID
+   #Again, more output is possible
+
+The output (hello_world.ddt) can be fed to DDTraceGraph to make a pretty figure.

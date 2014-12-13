@@ -1,0 +1,6 @@
+SRCDIRS += src
+SRCDIR = .
+
+APPS_CPPFILES := \
+  src/hello_world.cc \
+  src/hello_world_consumer.cc \

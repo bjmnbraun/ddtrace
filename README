@@ -1,0 +1,38 @@
+First, you may consider checking out the following resources on ddtrace to see
+if it's what you're looking for:
+
+Paper: http://stanford.edu/~bbraun/ddtrace_paper.pdf
+Slideshow: http://stanford.edu/~bbraun/ddtrace_slides.tar.gz
+
+First run configure:
+
+1) ./configure
+
+NOTE: If you have an older computer without perf_event_open rdpmc-in-userspace
+enabled by default, try ./configure.ramcloud instead.
+
+NOTE: If you are running on ramcloud use ./configure.ramcloud ;)
+
+NOTE: This runs our own configuration script, which is not related to
+autoconf, etc.
+
+2) make
+
+To install the library:
+
+3) sudo make install
+
+NOTE: sudo make clean-install undoes the above command
+
+OR, to use the library without installing, just
+add this directory to your include path and link path, i.e.:
+
+3) DDTRACE_HOME=<path to this directory>
+   When compiling: <compiler command> -I$(DDTRACE_HOME)
+   When linking: <linker command> -L$(DDTRACE_HOME)
+
+Finally, to compile against DDTrace just pass -lddtrace to the linker
+
+4) When linking: <linker command> -lddtrace
+
+See examples for example applications
