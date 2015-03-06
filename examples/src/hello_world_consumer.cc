@@ -67,7 +67,8 @@ void printRecord(IntervalRecord* record){
                 clock.entries[i].count);
     }
     printf("\t");
-    printf("%f\t", record->getElapsedSeconds());
+    //printf("%f\t", record->getElapsedSeconds());
+    printf("%s\t", record->getAnnotation());
     printf("%ld\t", record->getElapsedNanoseconds());
     PerfRecord perfRecord = record->getCountersDiff();
     uint64_t value = 0; 
@@ -117,8 +118,12 @@ int main(int argc, char** argv){
     }
 
     DDTrace::init();
-    //Must agree with the target
-    DDTrace::recordSource.init(RECORD_SINK_NAME);
+    if (argc >= 3){
+        //Custom sink name
+        DDTrace::recordSource.init(argv[2]);
+    } else {
+        DDTrace::recordSource.init(RECORD_SINK_NAME);
+    }
 
     //Process channels until we are interrupted
     //First set up the signal (interruption) handlers

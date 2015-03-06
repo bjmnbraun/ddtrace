@@ -68,6 +68,12 @@ const uint64_t CHECK_RECORDS_INTERVAL = 1000000;
   */
 const size_t SELECT_RECORDS_REUSE_COUNTER = 8;
 
+/** 
+  * Annotations can have this many characters in them (not including the
+  * null terminator)
+  */
+const size_t MAX_ANNOTATION_LENGTH = 16;
+
 enum CounterType {
     TIME_ONLY = 0,
     USERSPACE_CYCLES_ONLY,
@@ -213,6 +219,9 @@ struct IntervalRecord {
     const PerfRecord& getCountersDiff() const {
         return countersDiff;
     }
+    const char* getAnnotation() const {
+        return annotation;
+    }
     //TODO fill in the rest of the functions needed here. Maybe use macros to
     //make this easier to write?
     uint64_t getStartNanoseconds() const {        
@@ -246,13 +255,17 @@ struct IntervalRecord {
             const VectorClock& clock,
             const uint16_t& serverId,
             const double& cyclesPerSec,
-            const PerfRecord& countersDiff) :
+            const PerfRecord& countersDiff,
+            const char* annotation) :
         startCycles(startCycles),
         endCycles(endCycles),
         clock(clock),
         serverId(serverId),
         cyclesPerSec(cyclesPerSec),
-        countersDiff(countersDiff) {}
+        countersDiff(countersDiff),
+        annotation{0}{
+            strncpy(this->annotation, annotation, MAX_ANNOTATION_LENGTH);
+        }
 
     /**
       * This constructor is necessary to support data structures holding 
@@ -264,7 +277,8 @@ struct IntervalRecord {
         clock(0),
         serverId(0),
         cyclesPerSec(0),
-        countersDiff() {}
+        countersDiff(),
+        annotation{0}{}
 
     /**
       * Assigning an IntervalRecord to another can be done with memcpy,
@@ -278,6 +292,8 @@ struct IntervalRecord {
     uint16_t serverId;
     double cyclesPerSec; 
     PerfRecord countersDiff;
+    //Null terminated hence the +1 
+    char annotation[MAX_ANNOTATION_LENGTH + 1];
 };
 
 /**
@@ -285,7 +301,7 @@ struct IntervalRecord {
  * the old RecordState data-incompatible with new ones
  */
 inline const char* getRecordStateSchema(){
-    return "4";
+    return "5";
 }
 
 /*
@@ -530,13 +546,14 @@ class RecordSink {
            const uint64_t& startCycles,
            const uint64_t& endCycles,
            const PerfRecord& countersDiff,
-           const VectorClock* clock) {
+           const VectorClock* clock,
+           const char* annotation) {
        if (!initialized) return;
        if (!enabled) return;
 
 #if ENABLE_EXTRA_LOGGING == 1
        IntervalRecord intervalRecord (startCycles, endCycles, *clock, 
-       serverId, Cycles::perSecond(), countersDiff);
+       serverId, Cycles::perSecond(), countersDiff, annotation);
        {
 #if DEBUG_DROPPED_RECORDS == 1
            bool couldPush = records->all.push(intervalRecord);
@@ -716,7 +733,8 @@ class Interval {
         Interval(VectorClock* clock = NULL, bool start = false) : 
               startTime(0),
               clock(clock),
-              stopped(true)
+              stopped(true),
+              annotation{0}
         {
             /**
              * The value of the argument  start should be known at compile
@@ -737,6 +755,7 @@ class Interval {
         void start() {
             if (!threadInitialized) return;
             stopped = false;
+            Util::barrier();
             startTime = Cycles::rdtsc();
             perfCounters[threadid].readCounters(&this->startCounters);
             //recordSinks[threadid].recordIntervalBegin(startTime, clock);
@@ -769,16 +788,18 @@ class Interval {
             uint64_t stopTime = Cycles::rdtsc();
             // Bump for the clock for this interval so we can correctly
             // serialize using the clock.
-            clock->increment(serverId);
             PerfRecord diffCounters;
             perfCounters[threadid].readCounters(&diffCounters);
+            Util::barrier();
+            clock->increment(serverId);
             PerfCounters::subtractCounters(&startCounters,
                                           &diffCounters, 
                                           &diffCounters);
             recordSinks[threadid].recordIntervalEnd(startTime, 
                                      stopTime, 
                                      diffCounters, 
-                                     clock);
+                                     clock,
+                                     annotation);
         }
 
         /**
@@ -789,6 +810,15 @@ class Interval {
             this->clock = clock;
             stop();
         }
+
+        void annotate(const char* annotation){
+            if (!annotation){
+                //Null => clear annotation
+                this->annotation[0] = 0;
+            } else {
+                strncpy(this->annotation, annotation, MAX_ANNOTATION_LENGTH);
+            }
+        }
         
         /**
           * End the current interval and recycles the end values to effectively
@@ -797,14 +827,15 @@ class Interval {
         void checkpoint() {
             if (!initialized || stopped || !clock) return;
             stopped = false;
+            
+            PerfRecord diffCounters, stopCounters;
+            uint64_t stopTime = Cycles::rdtsc();
+            perfCounters[threadid].readCounters(&stopCounters);
+            Util::barrier();
            
             // Bump for the clock for the next interval so we can correctly
             // serialize using the clock.
             clock->increment(serverId);
-
-            uint64_t stopTime = Cycles::rdtsc();
-            PerfRecord diffCounters, stopCounters;
-            perfCounters[threadid].readCounters(&stopCounters);
             PerfCounters::subtractCounters(&startCounters,
                                           &stopCounters, 
                                           &diffCounters);
@@ -812,14 +843,14 @@ class Interval {
                                      startTime, 
                                      stopTime,
                                      diffCounters,
-                                     clock);
+                                     clock, 
+                                     annotation);
 
+            //Remove the cost of registering the record
             // Set startTime and startCounters
-            startTime = stopTime;
-            startCounters = stopCounters;
-
-            //Record the beginning of the next interval
-            //recordSinks[threadid].recordIntervalBegin(startTime, clock);
+            Util::barrier();
+            startTime = Cycles::rdtsc();
+            perfCounters[threadid].readCounters(&startCounters);
         }
 
         /**
@@ -871,6 +902,9 @@ class Interval {
          * A sanity check to prevent double calls to stop.
          */
         bool stopped;
+
+        //Null terminated, hence the +1
+        char annotation[MAX_ANNOTATION_LENGTH + 1];
 };
 
 

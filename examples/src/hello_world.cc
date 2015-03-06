@@ -24,6 +24,7 @@ int main(){
         //There is one interval in this request, where we print hello world
         {
             Interval _(&clock); //<-- interval starts here
+            _.annotate("Hello world!");
             printf("Hello world!\n");
         } //<-- interval ends here, i.e. when it goes out of scope
     }
